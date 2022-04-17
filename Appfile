@@ -1,0 +1,9 @@
+# iOS
+app_identifier(ENV["FASTLANE_APPLE_APP_ID"])
+apple_id(ENV["FASTLANE_APPLE_ID"])
+itc_team_id(ENV["FASTLANE_APPLE_ITC_TEAM_ID"])
+team_id(ENV["FASTLANE_APPLE_TEAM_ID"])
+
+# Android
+json_key_file(ENV["FASTLANE_ANDROID_JSON_KEY_FILE"])
+package_name(ENV["FASTLANE_ANDROID_PACKAGE_NAME"])
