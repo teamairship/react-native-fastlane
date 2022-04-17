@@ -6,6 +6,7 @@ before_all do |lane, options|
 end
 
 lane :liftoff do
+  # Populate supporting files
   %w[Appfile Matchfile Pluginfile].each do |file|
     uri = "https://raw.githubusercontent.com/teamairship/react-native-fastlane/main/#{file}"
     uri = URI(uri)
@@ -13,6 +14,44 @@ lane :liftoff do
 
     File.open(file, "w") { |f| f.write(contents) }
   end
+
+  # Generate metadata
+  Dir.mkdir("metadata") unless Dir.exist?("metadata")
+  FileUtils.mkdir_p("metadata/default") unless Dir.exist?("metadata/default")
+  FileUtils.mkdir_p("metadata/review_information") unless Dir.exist?("metadata/review_information")
+
+  [
+    "copyright.txt",
+    "primary_category.txt",
+    "secondary_category.txt",
+    "primary_first_sub_category.txt",
+    "primary_second_sub_category.txt",
+    "secondary_first_sub_category.txt",
+    "secondary_second_sub_category.txt",
+  ].each { |file| FileUtils.touch("metadata/#{file}") }
+
+  [
+    "name.txt",
+    "subtitle.txt",
+    "privacy_url.txt",
+    "apple_tv_privacy_policy.txt",
+    "description.txt",
+    "keywords.txt",
+    "release_notes.txt",
+    "support_url.txt",
+    "marketing_url.txt",
+    "promotional_text.txt"
+  ].each { |file| FileUtils.touch("metadata/default/#{file}") }
+
+  [
+    "first_name.txt",
+    "last_name.txt",
+    "email_address.txt",
+    "phone_number.txt",
+    "demo_user.txt",
+    "demo_password.txt",
+    "notes.txt"
+  ].each { |file| FileUtils.touch("metadata/review_information/#{file}") }
 end
 
 lane :update_version do |options|
