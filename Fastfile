@@ -1,7 +1,18 @@
 fastlane_require 'dotenv'
+fastlane_require 'net/http'
 
 before_all do |lane, options|
   Dotenv.overload("../.env")
+end
+
+lane :liftoff do
+  %w[Appfile Matchfile Pluginfile].each do |file|
+    uri = "https://raw.githubusercontent.com/teamairship/react-native-fastlane/main/#{file}"
+    uri = URI(uri)
+    contents = Net::HTTP.get(uri)
+
+    File.open(file, "w") { |f| f.write(contents) }
+  end
 end
 
 lane :update_version do |options|
