@@ -1,6 +1,32 @@
 # React Native Fastlane
 
-### Environment Variables
+## Installation
+
+[Fastlane Docs](https://docs.fastlane.tools/)
+
+## Setup
+
+### Fastlane
+
+[iOS Setup](https://docs.fastlane.tools/getting-started/ios/setup/)
+
+[Android Setup](https://docs.fastlane.tools/getting-started/android/setup/)
+
+### Firebase
+
+[App Distribution](https://rnfirebase.io/app-distribution/usage)
+
+### Slack
+
+[Incoming Webhooks](https://slack.com/help/articles/115005265063-Incoming-webhooks-for-Slack)
+
+### Apple
+
+[Fastlane Authentication - Method 3](https://docs.fastlane.tools/getting-started/ios/authentication/)
+
+[App Specific Password](https://support.apple.com/en-us/HT204397)
+
+## Required Environment Variables
 
 ```
 FASTLANE_CI=
