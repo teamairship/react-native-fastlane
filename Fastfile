@@ -1,5 +1,5 @@
-fastlane_require 'dotenv'
 fastlane_require 'net/http'
+fastlane_require 'dotenv'
 
 before_all do |lane, options|
   Dotenv.overload("../.env")
@@ -69,52 +69,12 @@ lane :update_version do |options|
 end
 
 platform :ios do
-  before_all do
-    lane_context["IOS_TARGET"] = ENV["FASTLANE_APPLE_PROJECT_NAME"]
-    lane_context["IOS_TARGET"] += ".staging" if lane == "staging"
+  before_all do |lane, options|
+    lane_context["IS_CI"] = ENV["FASTLANE_CI"] == "true"
     lane_context["IOS_SCHEME"] = ENV["FASTLANE_APPLE_PROJECT_NAME"]
-    lane_context["IOS_SCHEME"] += ".staging" if lane == "staging"
+    lane_context["IOS_SCHEME"] += ".#{lane}" if lane
     lane_context["IOS_APP_ID"] = CredentialsManager::AppfileConfig.try_fetch_value(:app_identifier)
-    lane_context["IOS_APP_ID"] += ".staging" if lane == "staging"
-  end
-
-  lane :metadata do
-    Dir.mkdir("metadata") unless Dir.exist?("metadata")
-    FileUtils.mkdir_p("metadata/default") unless Dir.exist?("metadata/default")
-    FileUtils.mkdir_p("metadata/review_information") unless Dir.exist?("metadata/review_information")
-
-    [
-      "copyright.txt",
-      "primary_category.txt",
-      "secondary_category.txt",
-      "primary_first_sub_category.txt",
-      "primary_second_sub_category.txt",
-      "secondary_first_sub_category.txt",
-      "secondary_second_sub_category.txt",
-    ].each { |file| FileUtils.touch("metadata/#{file}") }
-
-    [
-      "name.txt",
-      "subtitle.txt",
-      "privacy_url.txt",
-      "apple_tv_privacy_policy.txt",
-      "description.txt",
-      "keywords.txt",
-      "release_notes.txt",
-      "support_url.txt",
-      "marketing_url.txt",
-      "promotional_text.txt"
-    ].each { |file| FileUtils.touch("metadata/default/#{file}") }
-
-    [
-      "first_name.txt",
-      "last_name.txt",
-      "email_address.txt",
-      "phone_number.txt",
-      "demo_user.txt",
-      "demo_password.txt",
-      "notes.txt"
-    ].each { |file| FileUtils.touch("metadata/review_information/#{file}") }
+    lane_context["IOS_APP_ID"] += ".#{lane}" if lane
   end
 
   lane :build do |options|
@@ -126,11 +86,34 @@ platform :ios do
       scheme: options[:scheme],
       output_directory: "ios/build",
       xcargs: "-allowProvisioningUpdates",
-      workspace: fetch_xcworkspace
+      workspace: fetch_xcworkspace,
+      configuration: options[:configuration]
     )
   end
 
-  desc "Step 1: Submit a new staging build to internal testers..."
+  desc "Development..."
+  lane :develop do |options|
+    bump_build_number(:ios)
+
+    # Add badge to app icon
+    prepare_icons(platform: :ios, lane: :develop)
+
+    # Import or create certificates
+    match(
+      type: "adhoc",
+      readonly: lane_context["IS_CI"],
+      app_identifier: lane_context["IOS_APP_ID"]
+    )
+
+    # Launch the development app
+    medium = options[:device] ? "device" : "simulator"
+    sh "cd .. && npx react-native run-ios --#{medium} --scheme #{lane_context["IOS_SCHEME"]} && exit 0"
+
+    # Remove badge from app icon
+    discard_icons(platform: :ios)
+  end
+
+  desc "Submit a new staging build to internal testers..."
   lane :staging do
     bump_build_number(:ios)
 
@@ -140,12 +123,12 @@ platform :ios do
     # Import or create certificates
     match(
       type: "adhoc",
-      readonly: ENV["FASTLANE_CI"] == "true",
+      readonly: lane_context["IS_CI"],
       app_identifier: lane_context["IOS_APP_ID"]
     )
 
     # Build staging app
-    build(scheme: lane_context["IOS_SCHEME"])
+    build(scheme: lane_context["IOS_SCHEME"], configuration: "Staging")
 
     # Upload to Firebase
     firebase_app_distribution(
@@ -160,7 +143,7 @@ platform :ios do
     notify_the_team(:ios, :staging)
   end
 
-  desc "Step 2: Once staging is approved, submit a production build to beta testers..."
+  desc "Once staging is approved, submit a production build to beta testers..."
   lane :beta do
     bump_build_number(:ios)
 
@@ -170,12 +153,12 @@ platform :ios do
     # Import or create certificates
     match(
       type: "appstore",
-      readonly: ENV["FASTLANE_CI"] == "true",
+      readonly: lane_context["IS_CI"],
       app_identifier: lane_context["IOS_APP_ID"]
     )
 
     # Build production ready app
-    build(scheme: ENV["FASTLANE_APPLE_PROJECT_NAME"])
+    build(scheme: lane_context["IOS_SCHEME"], configuration: "Release")
 
     # Upload to TestFlight
     upload_to_testflight(
@@ -206,7 +189,7 @@ platform :ios do
     notify_the_team(:ios, :beta)
   end
 
-  desc "Step 3: Once beta is approved, promote beta build to production..."
+  desc "Once beta is approved, promote beta build to production..."
   lane :release do
     upload_to_app_store(
       submission_information: "{\"export_compliance_uses_encryption\": false, \"add_id_info_uses_idfa\": false }"
@@ -219,19 +202,32 @@ end
 platform :android do
   before_all do |lane, options|
     lane_context["PACKAGE_NAME"] = CredentialsManager::AppfileConfig.try_fetch_value(:package_name)
-    lane_context["PACKAGE_NAME"] += ".staging" if lane == "staging"
+    lane_context["PACKAGE_NAME"] += ".#{lane}" if lane
   end
 
   lane :build do |options|
     gradle(
       task: "clean #{options[:task] || "bundle"}",
-      build_type: "Release",
-      project_dir: "android",
-      flavor: options[:flavor]
+      build_type: options[:variant],
+      project_dir: "android"
     )
   end
 
-  desc "Submit a new Staging Build to Firebase"
+  desc "Development..."
+  lane :develop do
+    bump_build_number(:android)
+
+    # Add badge to app icon
+    prepare_icons(platform: :android, lane: :develop)
+
+    # Launch the development app
+    sh "cd .. && adb reverse tcp:8081 tcp:8081 && npx react-native run-android --variant=debug"
+
+    # Remove badge from app icon
+    discard_icons(platform: :android)
+  end
+
+  desc "Submit a new staging build to internal testers..."
   lane :staging do
     bump_build_number(:android)
 
@@ -239,13 +235,13 @@ platform :android do
     prepare_icons(platform: :android, lane: :staging)
 
     # Build staging app
-    build(flavor: "Staging", task: "assemble")
+    build(variant: "Staging", task: "assemble")
 
     # Upload to Firebase
     firebase_app_distribution(
-      app: ENV["FIREBASE_ANDROID_APP_ID"],
-      groups: ENV["FIREBASE_GROUPS"],
       android_artifact_type: "APK",
+      groups: ENV["FIREBASE_GROUPS"],
+      app: ENV["FIREBASE_ANDROID_APP_ID"],
       android_artifact_path: lane_context[SharedValues::GRADLE_APK_OUTPUT_PATH]
     )
 
@@ -256,7 +252,7 @@ platform :android do
     notify_the_team(:android, :staging)
   end
 
-  desc "Submit a new Beta Build to Google Play"
+  desc "Once staging is approved, submit a production build to beta testers..."
   lane :beta do
     bump_build_number(:android)
 
@@ -264,7 +260,7 @@ platform :android do
     prepare_icons(platform: :android)
 
     # Build production ready app
-    build(flavor: "Production")
+    build(variant: "Release")
 
     # Upload to Google Play
     upload_to_play_store(track: "beta")
@@ -273,7 +269,7 @@ platform :android do
     notify_the_team(:android, :beta)
   end
 
-  desc "Promote Beta Track to Production Release"
+  desc "Once beta is approved, promote beta build to production..."
   lane :release do
     # Promote Beta Track to Production Release
     upload_to_play_store(track: "beta", track_promote_to: "production")
@@ -301,7 +297,7 @@ lane :prepare_icons do |options|
     )
   end
 
-  if options[:lane] == :staging
+  if options[:lane]
     version = fetch_version(platform)
     shield = "#{version[:name]}-#{version[:code]}-green"
 
@@ -328,7 +324,7 @@ end
 def fetch_version(platform)
   if platform == :ios
     {
-      name: get_version_number(xcodeproj: fetch_xcodeproj, target: lane_context["IOS_TARGET"]),
+      name: get_version_number(xcodeproj: fetch_xcodeproj),
       code: get_build_number(xcodeproj: fetch_xcodeproj)
     }
   elsif platform == :android
