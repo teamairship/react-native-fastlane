@@ -1,10 +1,10 @@
 # React Native Fastlane
 
-# Setup
+The best approach to efficient react native builds and distributions.
 
 ## Prerequisites
 
-```shell
+```bash
 $ npx react-native init MyApp --template react-native-template-typescript
 $ cd MyApp
 $ touch .env .env.staging .env.production
