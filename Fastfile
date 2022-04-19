@@ -1,8 +1,23 @@
-fastlane_require 'net/http'
-fastlane_require 'dotenv'
+fastlane_require "net/http"
+fastlane_require "dotenv"
+
+SCHEMAS = ["develop", "staging"]
 
 before_all do |lane, options|
   Dotenv.overload("../.env")
+
+  lane_context["IS_CI"] = ENV["FASTLANE_CI"] == "true"
+
+  lane_context["IMAGE_ASSETS_PATH"] = "ios/#{ENV["FASTLANE_APPLE_PROJECT_NAME"]}/Images.xcassets"
+  lane_context["XCWORKSPACE_PATH"] = "ios/#{ENV["FASTLANE_APPLE_PROJECT_NAME"]}.xcworkspace"
+  lane_context["XCPROJ_PATH"] = "ios/#{ENV["FASTLANE_APPLE_PROJECT_NAME"]}.xcodeproj"
+  lane_context["GRADLE_PATH"] = "android/app/build.gradle"
+  lane_context["IOS_SCHEME"] = ENV["FASTLANE_APPLE_PROJECT_NAME"]
+  lane_context["IOS_SCHEME"] += ".#{lane}" if SCHEMAS.include?(lane)
+  lane_context["IOS_APP_ID"] = CredentialsManager::AppfileConfig.try_fetch_value(:app_identifier)
+  lane_context["IOS_APP_ID"] += ".#{lane}" if SCHEMAS.include?(lane)
+  lane_context["PACKAGE_NAME"] = CredentialsManager::AppfileConfig.try_fetch_value(:package_name)
+  lane_context["PACKAGE_NAME"] += ".#{lane}" if SCHEMAS.include?(lane)
 end
 
 lane :liftoff do
@@ -58,25 +73,17 @@ lane :update_version do |options|
   version = fetch_metadata("version.txt")
 
   increment_version_number(
-    xcodeproj: fetch_xcodeproj,
+    xcodeproj: lane_context["XCODEPROJ_PATH"],
     version_number: version
   )
 
   increment_version_name(
-    gradle_file_path: fetch_gradle,
+    gradle_file_path: lane_context["GRADLE_PATH"],
     version_name: version
   )
 end
 
 platform :ios do
-  before_all do |lane, options|
-    lane_context["IS_CI"] = ENV["FASTLANE_CI"] == "true"
-    lane_context["IOS_SCHEME"] = ENV["FASTLANE_APPLE_PROJECT_NAME"]
-    lane_context["IOS_SCHEME"] += ".#{lane}" if lane
-    lane_context["IOS_APP_ID"] = CredentialsManager::AppfileConfig.try_fetch_value(:app_identifier)
-    lane_context["IOS_APP_ID"] += ".#{lane}" if lane
-  end
-
   lane :build do |options|
     build_app(
       silent: true,
@@ -86,7 +93,7 @@ platform :ios do
       scheme: options[:scheme],
       output_directory: "ios/build",
       xcargs: "-allowProvisioningUpdates",
-      workspace: fetch_xcworkspace,
+      workspace: lane_context["XCWORKSPACE_PATH"],
       configuration: options[:configuration]
     )
   end
@@ -200,11 +207,6 @@ platform :ios do
 end
 
 platform :android do
-  before_all do |lane, options|
-    lane_context["PACKAGE_NAME"] = CredentialsManager::AppfileConfig.try_fetch_value(:package_name)
-    lane_context["PACKAGE_NAME"] += ".#{lane}" if lane
-  end
-
   lane :build do |options|
     gradle(
       task: "clean #{options[:task] || "bundle"}",
@@ -252,6 +254,31 @@ platform :android do
     notify_the_team(:android, :staging)
   end
 
+  desc "Submit a new production build to internal users..."
+  lane :internal do
+    bump_build_number(:android)
+
+    # Add badge to app icon
+    prepare_icons(platform: :android)
+
+    # Build staging app
+    build(variant: "Release", task: "assemble")
+
+    # Upload to Firebase
+    firebase_app_distribution(
+      android_artifact_type: "APK",
+      groups: ENV["FIREBASE_GROUPS"],
+      app: ENV["FIREBASE_ANDROID_APP_ID"],
+      android_artifact_path: lane_context[SharedValues::GRADLE_APK_OUTPUT_PATH]
+    )
+
+    # Remove badge from app icon
+    discard_icons(platform: :android)
+
+    # Notify team in Slack
+    notify_the_team(:android, :internal)
+  end
+
   desc "Once staging is approved, submit a production build to beta testers..."
   lane :beta do
     bump_build_number(:android)
@@ -286,7 +313,7 @@ lane :prepare_icons do |options|
     appicon(
       appicon_devices: [:ipad, :iphone, :ios_marketing],
       appicon_image_file: "app_icon.png",
-      appicon_path: "#{fetch_ios_prefix}/Images.xcassets"
+      appicon_path: lane_context["IMAGE_ASSETS_PATH"]
     )
   elsif platform == :android
     android_appicon(
@@ -324,35 +351,19 @@ end
 def fetch_version(platform)
   if platform == :ios
     {
-      name: get_version_number(xcodeproj: fetch_xcodeproj),
-      code: get_build_number(xcodeproj: fetch_xcodeproj)
+      name: get_version_number(xcodeproj: lane_context["XCODEPROJ_PATH"]),
+      code: get_build_number(xcodeproj: lane_context["XCODEPROJ_PATH"])
     }
   elsif platform == :android
     {
-      name: android_get_version_name(gradle_file: fetch_gradle),
-      code: android_get_version_code(gradle_file: fetch_gradle)
+      name: android_get_version_name(gradle_file: lane_context["GRADLE_PATH"]),
+      code: android_get_version_code(gradle_file: lane_context["GRADLE_PATH"])
     }
   end
 end
 
-def fetch_xcodeproj
-  "#{fetch_ios_prefix}.xcodeproj"
-end
-
-def fetch_xcworkspace
-  "#{fetch_ios_prefix}.xcworkspace"
-end
-
-def fetch_ios_prefix
-  "ios/#{ENV["FASTLANE_APPLE_PROJECT_NAME"]}"
-end
-
-def fetch_gradle
-  "android/app/build.gradle"
-end
-
-def fetch_metadata(key)
-  File.read("metadata/#{key}")
+def fetch_metadata(path)
+  File.read("metadata/#{path}")
 end
 
 def bump_build_number(platform)
@@ -361,7 +372,7 @@ def bump_build_number(platform)
     current_build_number = previous_build_number + 1
 
     increment_build_number(
-      xcodeproj: fetch_xcodeproj,
+      xcodeproj: lane_context["XCODEPROJ_PATH"],
       build_number: current_build_number
     )
   elsif platform == :android
@@ -373,7 +384,7 @@ def bump_build_number(platform)
     current_build_number = previous_build_number + 1
 
     increment_version_code(
-      gradle_file_path: fetch_gradle,
+      gradle_file_path: lane_context["GRADLE_PATH"],
       version_code: current_build_number
     )
   end
@@ -385,17 +396,17 @@ def notify_the_team(platform, lane)
     ? "Check TestFlight for new version..." \
     : "https://play.google.com/store/apps/details?id=#{lane_context["PACKAGE_NAME"]}"
 
-  instructions = lane == :staging ? "Lookout for Firebase email..." : message
+  instructions = %i[staging internal].include?(lane) ? "Lookout for Firebase email..." : message
 
-  send_slack_message(
-    "#{ENV["FASTLANE_PRODUCT_NAME"]} #{platform} Build: #{lane} #{version[:name]} (#{version[:code]})\n---\n#{instructions}\n---"
-  )
+  send_slack_message( "#{ENV["FASTLANE_PRODUCT_NAME"]} #{platform} Build: #{lane} #{version[:name]} (#{version[:code]})", "#{instructions}\n\n")
 end
 
-def send_slack_message(message)
+def send_slack_message(title, message)
   slack(
+    pretext: title,
     message: message,
     channel: "##{ENV["FASTLANE_SLACK_CHANNEL"]}",
-    slack_url: ENV["FASTLANE_SLACK_WEBHOOK_URL"]
+    slack_url: ENV["FASTLANE_SLACK_WEBHOOK_URL"],
+    use_webhook_configured_username_and_icon: false
   )
 end
