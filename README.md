@@ -19,15 +19,19 @@ $ touch .env .env.staging .env.production
 
 ---
 
-## iOS
+## Setup
 
-### Step 1 - Create Build Configuration
+For newly initialized React Native projects, follow the steps below to standardize the project for the lanes you will use. If you're adding onto an existing project, you can skip the steps you've already done. Pay attention to the naming conventions as they are very important.
+
+### iOS
+
+#### Step 1 - Create Build Configuration
 
 1. Open the Xcode Workspace (\*.xcworkspace)
 2. Click on the project, then the “+” icon under the “Configurations” section and select “Duplicate Release Build Configuration” and name it “Staging”
 3. In your terminal, navigate to the `ios` directory and run `pod install`
 
-### Step 2 - Create Staging Scheme
+#### Step 2 - Create Staging Scheme
 
 1. In the main menu, select Product > Scheme > Manage Schemes
 2. Click on the main project scheme (same as project name) and click on the icon at the bottom and select “Duplicate”
@@ -36,7 +40,7 @@ $ touch .env .env.staging .env.production
 5. Change the “Build Configuration” on the “Run”, “Profile” and “Archive” to the new “Staging” configuration
 6. Back on the “Manage Schemes” window, make sure “Shared” is checked for the _project_name_.staging scheme
 
-### Step 3 - Create Develop Scheme
+#### Step 3 - Create Develop Scheme
 
 1. In the main menu, select Product > Scheme > Manage Schemes
 2. Click on the main project scheme (same as project name) and click on the icon at the bottom and select “Duplicate”
@@ -45,7 +49,7 @@ $ touch .env .env.staging .env.production
 5. Change the “Build Configuration” on the “Run”, “Profile” and “Archive” to the “Debug" configuration
 6. Back on the “Manage Schemes” window, make sure “Shared” is checked for the _project_name_.develop scheme
 
-### Step 4 - Configure Environment Variables
+#### Step 4 - Configure Environment Variables
 
 3. Configure Schemes
    - Main Scheme
@@ -69,9 +73,9 @@ $ touch .env .env.staging .env.production
 
 ---
 
-## Android
+### Android
 
-### Step 1 - Setup Keystore
+#### Step 1 - Setup Keystore
 
 1. Generate a new keystore by following steps [here](https://developer.android.com/studio/publish/app-signing#generate-key)
 2. Place keystore file in the `android/app` directory.
@@ -84,7 +88,7 @@ storeFile=keystore_name.keystore
 storePassword=
 ```
 
-### Step 2 - Gradle Updates
+#### Step 2 - Gradle Updates
 
 Open `android/app/build.gradle` and make the following updates.
 
@@ -160,7 +164,7 @@ buildTypes {
 }
 ```
 
-### Step 3 - Update Build Names
+#### Step 3 - Update Build Names
 
 1. Run `mkdir -p android/app/src/staging/res/values`
 2. Run `touch android/app/src/staging/res/values/strings.xml`
@@ -182,9 +186,7 @@ buildTypes {
 </resources>
 ```
 
----
-
-## Fastlane
+### Fastlane
 
 1. Run `bundle add fastlane dotenv pry`
 2. Run `mkdir fastlane && touch fastlane/Fastfile`
@@ -218,7 +220,7 @@ FASTLANE_APPLE_APP_ID=
 FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD=
 ```
 
-# Resources
+## Resources
 
 [Fastlane Docs](https://docs.fastlane.tools/)
 
