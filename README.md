@@ -200,7 +200,6 @@ buildTypes {
 FASTLANE_CI=
 FASTLANE_PRODUCT_NAME=
 
-# Use Staging app's information for all FIREBASE_* environment variables
 FIREBASE_TOKEN=
 FIREBASE_GROUPS=
 FIREBASE_IOS_APP_ID=
