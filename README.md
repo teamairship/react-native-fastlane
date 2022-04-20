@@ -49,25 +49,24 @@ For newly initialized React Native projects, follow the steps below to standardi
 
 #### **Step 4** - Configure Environment Variables
 
-3. Configure Schemes
-   - Main Scheme
-     - In the main menu, select Product > Scheme > Manage Schemes.
-     - Click on the main project scheme and click the Edit button.
-     - Expand the Build menu and click on Pre-actions.
-     - Click the + sign and select New Run Script Action.
-     - In the field, copy and paste `echo ".env.production" > /tmp/envfile`
-   - Staging Scheme
-     - In the main menu, select Product > Scheme > Manage Schemes.
-     - Click on the \*.staging project scheme and click the Edit button.
-     - Expand the Build menu and click on Pre-actions.
-     - Click the + sign and select New Run Script Action.
-     - In the field, copy and paste `echo ".env.staging” > /tmp/envfile`
-   - Develop Scheme
-     - In the main menu, select Product > Scheme > Manage Schemes.
-     - Click on the \*.develop project scheme and click the Edit button.
-     - Expand the Build menu and click on Pre-actions.
-     - Click the + sign and select New Run Script Action.
-     - In the field, copy and paste `echo ".env” > /tmp/envfile`
+- Main Scheme
+  - In the main menu, select Product > Scheme > Manage Schemes.
+  - Click on the main project scheme and click the Edit button.
+  - Expand the Build menu and click on Pre-actions.
+  - Click the + sign and select New Run Script Action.
+  - In the field, copy and paste `echo ".env.production" > /tmp/envfile`
+- Staging Scheme
+  - In the main menu, select Product > Scheme > Manage Schemes.
+  - Click on the \*.staging project scheme and click the Edit button.
+  - Expand the Build menu and click on Pre-actions.
+  - Click the + sign and select New Run Script Action.
+  - In the field, copy and paste `echo ".env.staging” > /tmp/envfile`
+- Develop Scheme
+  - In the main menu, select Product > Scheme > Manage Schemes.
+  - Click on the \*.develop project scheme and click the Edit button.
+  - Expand the Build menu and click on Pre-actions.
+  - Click the + sign and select New Run Script Action.
+  - In the field, copy and paste `echo ".env” > /tmp/envfile`
 
 ### **Android**
 
