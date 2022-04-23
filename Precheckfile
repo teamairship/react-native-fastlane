@@ -1,0 +1,2 @@
+negative_apple_sentiment(level: :warn)
+future_functionality(level: :warn)
