@@ -1,11 +1,18 @@
 fastlane_require "net/http"
 fastlane_require "dotenv"
 
-BUILD_SCHEMES = %i[develop staging]
-AND_GRAD_PATH = "android/app/build.gradle"
-IOS_DIRECTORY = "ios/#{ENV["FASTLANE_APPLE_PROJECT_NAME"]}"
-IOS_PROJ_PATH = "#{IOS_DIRECTORY}.xcodeproj"
-IOS_WORK_PATH = "#{IOS_DIRECTORY}.xcworkspace"
+BUILD_SCHEMES  = %i[develop staging]
+AND_GRAD_PATH  = "android/app/build.gradle"
+AND_PACKAGE_ID = CredentialsManager::AppfileConfig.try_fetch_value(:package_name) || ""
+IOS_IDENTIFIER = CredentialsManager::AppfileConfig.try_fetch_value(:app_identifier) || ""
+
+IOS_PROJ_NAME,IOS_DIRECTORY,IOS_PROJ_PATH,IOS_WORK_PATH = nil
+Dir.glob("../ios/*.xcworkspace") do |f|
+  IOS_PROJ_NAME = File.basename(f, File.extname(f))
+  IOS_DIRECTORY = "ios/#{IOS_PROJ_NAME}"
+  IOS_PROJ_PATH = "#{IOS_DIRECTORY}.xcodeproj"
+  IOS_WORK_PATH = "#{IOS_DIRECTORY}.xcworkspace"
+end
 
 before_all do |lane, options|
   Dotenv.overload("../.env")
@@ -13,36 +20,82 @@ before_all do |lane, options|
   ensure_env_vars(
     env_vars: [
       "FASTLANE_PRODUCT_NAME",
+      "FASTLANE_APPLE_USERNAME",
       "FASTLANE_ANDROID_PACKAGE_NAME",
       "FASTLANE_ANDROID_JSON_KEY_FILE",
-      "FASTLANE_APPLE_ID",
-      "FASTLANE_APPLE_TEAM_ID",
-      "FASTLANE_APPLE_ITC_TEAM_ID",
-      "FASTLANE_APPLE_PROJECT_NAME",
-      "FASTLANE_APPLE_APP_ID",
+      "FASTLANE_APPLE_BUNDLE_IDENTIFIER",
       "FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD"
     ]
   )
 
-  lane_context["IOS_SCHEME"]  = add_suffix_to(ENV["FASTLANE_APPLE_PROJECT_NAME"], lane)
-  lane_context["IOS_APP_ID"]  = add_suffix_to(fetch_config(:app_identifier), lane)
-  lane_context["AND_PACKAGE"] = add_suffix_to(fetch_config(:package_name), lane)
+  lane_context["IOS_SCHEME"]  = add_suffix_to(IOS_PROJ_NAME, lane)
+  lane_context["IOS_APP_ID"]  = add_suffix_to(IOS_IDENTIFIER, lane)
+  lane_context["AND_PACKAGE"] = add_suffix_to(AND_PACKAGE_ID, lane)
 end
 
 lane :liftoff do |options|
+  if ENV["FASTLANE_APPLE_DEV_TEAM_ID"].empty? && ENV["FASTLANE_APPLE_ITC_TEAM_ID"].empty?
+    UI.message("You haven't set your Apple team IDs, fetching teams now... ⏳")
+
+    client = fetch_teams(true, true)
+    dev_team_id = client.portal_client.instance_variable_get(:@current_team_id)
+    itc_team_id = client.tunes_client.instance_variable_get(:@current_team_id)
+
+    UI.important("
+      If you'd like to skip this prompt in the future\n
+      Set the FASTLANE_APPLE_DEV_TEAM_ID environment variable to #{dev_team_id}
+      Set the FASTLANE_APPLE_ITC_TEAM_ID environment variable to #{itc_team_id}
+    ")
+  elsif ENV["FASTLANE_APPLE_DEV_TEAM_ID"].empty?
+    UI.message("You haven't set your Apple Developer Team ID, fetching teams now... ⏳")
+
+    client = fetch_teams(true, false)
+    the_id = client.portal_client.instance_variable_get(:@current_team_id)
+
+    UI.important("
+      If you'd like to skip this prompt in the future\n
+      Set the FASTLANE_APPLE_DEV_TEAM_ID environment variable to #{the_id}
+    ")
+  elsif ENV["FASTLANE_APPLE_ITC_TEAM_ID"].empty?
+    UI.message("You haven't set your App Store Connect Team ID, fetching teams now... ⏳")
+
+    client = fetch_teams(false, true)
+    the_id = client.tunes_client.instance_variable_get(:@current_team_id)
+
+    UI.important("
+      If you'd like to skip this prompt in the future\n
+      Set the FASTLANE_APPLE_ITC_TEAM_ID environment variable to #{the_id}
+    ")
+  end
+
+  UI.message("🚀 Let's GOOOOOOOOOOOO! 🚀")
   populate_supporting_files
   generate_metadata
-  generate_apple_identifiers if options[:identifiers] || options[:all]
-  generate_apple_profiles if options[:profiles] || options[:all]
-  create_app_in_portal if options[:portal] || options[:all]
-  keystore if options[:keystore] || options[:all]
+
+  if UI.confirm("Do you need me to generate Apple bundle identifiers? (yN)")
+    generate_apple_identifiers
+  end
+
+  if UI.confirm("Do you need me to generate Apple Provisioning Profiles? (yN)")
+    generate_apple_profiles
+  end
+
+  if UI.confirm("Do you need me to create an app in App Store Connect? (yN)")
+    create_app_in_portal
+  end
+
+  if UI.confirm("Do you need me to generate an Android keystore for production? (yN)")
+    generate_keystore
+  end
+
+  UI.success("🎉 All done! 🎉")
 end
 
-lane :keystore do |options|
+lane :generate_keystore do |options|
   ensure_env_vars(
     env_vars: [
-      "FASTLANE_ANDROID_KEYSTORE_KEYSTORE_NAME",
       "FASTLANE_ANDROID_KEYSTORE_ALIAS_NAME",
+      "FASTLANE_ANDROID_KEYSTORE_KEYSTORE_NAME"
     ]
   )
 
@@ -51,16 +104,8 @@ end
 
 lane :update_version do |options|
   version = fetch_metadata("version.txt")
-
-  increment_version_number(
-    xcodeproj: IOS_PROJ_PATH,
-    version_number: version
-  )
-
-  increment_version_name(
-    gradle_file_path: AND_GRAD_PATH,
-    version_name: version
-  )
+  increment_version_number(xcodeproj: IOS_PROJ_PATH, version_number: version)
+  increment_version_name(gradle_file_path: AND_GRAD_PATH, version_name: version)
 end
 
 platform :ios do
@@ -82,7 +127,7 @@ platform :ios do
     update_info_plist(
       xcodeproj: IOS_PROJ_PATH,
       app_identifier: lane_context["IOS_APP_ID"],
-      plist_path: "/#{ENV["FASTLANE_APPLE_PROJECT_NAME"]}/Info.plist",
+      plist_path: "/#{IOS_PROJ_NAME}/Info.plist",
       display_name: "#{ENV["FASTLANE_PRODUCT_NAME"]} (#{options[:prefix]})"
     )
   end
@@ -91,7 +136,7 @@ platform :ios do
     match(type: options[:type], readonly: is_ci, app_identifier: lane_context["IOS_APP_ID"])
   end
 
-  desc "Development..."
+  desc "Local development using iOS Simulator..."
   lane :develop do |options|
     increment_build(:ios)
     prefix_name(prefix: "D")
@@ -101,7 +146,7 @@ platform :ios do
     discard_icons(platform: :ios)
   end
 
-  desc "Submit a new staging build to internal testers..."
+  desc "Submit a new staging build to Firebase testers..."
   lane :staging do
     ensure_env_vars(
       env_vars: [
@@ -117,7 +162,6 @@ platform :ios do
     fetch_profiles(type: "adhoc")
     build_application(scheme: lane_context["IOS_SCHEME"], configuration: "Staging")
 
-    # Upload to Firebase
     firebase_app_distribution(
       app: ENV["FIREBASE_IOS_APP_ID"],
       groups: ENV["FIREBASE_GROUPS"]
@@ -127,14 +171,13 @@ platform :ios do
     notify_the_team(:ios, :staging)
   end
 
-  desc "Once staging is approved, submit a production build to beta testers..."
+  desc "Once staging is approved, submit a production build to TestFlight testers..."
   lane :beta do
     increment_build(:ios)
     prepare_icons(platform: :ios)
     fetch_profiles(type: "appstore")
     build_application(scheme: lane_context["IOS_SCHEME"], configuration: "Release")
 
-    # Upload to TestFlight
     upload_to_testflight(
       changelog: fetch_metadata("default/release_notes.txt"),
       skip_waiting_for_build_processing: true,
@@ -162,7 +205,7 @@ platform :ios do
     notify_the_team(:ios, :beta)
   end
 
-  desc "Once beta is approved, promote beta build to production..."
+  desc "Once beta is approved, promote beta build to App Store..."
   lane :release do
     upload_to_app_store(
       submission_information: "{\"export_compliance_uses_encryption\": false, \"add_id_info_uses_idfa\": false }"
@@ -173,10 +216,6 @@ platform :ios do
 end
 
 platform :android do
-  lane :create_keystore do |options|
-    keystore
-  end
-
   lane :build_application do |options|
     gradle(
       project_dir: "android",
@@ -190,7 +229,9 @@ platform :android do
   lane :develop do
     increment_build(:android)
     prepare_icons(platform: :android, lane: :develop)
+
     sh "cd .. && adb reverse tcp:8081 tcp:8081 && npx react-native run-android --variant=#{options[:variant] || "developDebug"}"
+
     discard_icons(platform: :android)
   end
 
@@ -200,7 +241,7 @@ platform :android do
       env_vars: [
         "FIREBASE_TOKEN",
         "FIREBASE_GROUPS",
-        "FIREBASE_ANDROID_APP_ID"
+        "FIREBASE_AND_APP_ID"
       ]
     )
 
@@ -211,7 +252,7 @@ platform :android do
     firebase_app_distribution(
       android_artifact_type: "APK",
       groups: ENV["FIREBASE_GROUPS"],
-      app: ENV["FIREBASE_ANDROID_APP_ID"],
+      app: ENV["FIREBASE_AND_APP_ID"],
       android_artifact_path: lane_context[SharedValues::GRADLE_APK_OUTPUT_PATH]
     )
 
@@ -228,7 +269,7 @@ platform :android do
     firebase_app_distribution(
       android_artifact_type: "APK",
       groups: ENV["FIREBASE_GROUPS"],
-      app: ENV["FIREBASE_ANDROID_APP_ID"],
+      app: ENV["FIREBASE_AND_APP_ID"],
       android_artifact_path: lane_context[SharedValues::GRADLE_APK_OUTPUT_PATH]
     )
 
@@ -285,16 +326,38 @@ end
 lane :discard_icons do |options|
   platform = options[:platform]
   location = platform == :ios \
-    ? "../ios/**/*.appiconset/*.png" \
-    : "../android/**/*/ic_launcher*.png"
+    ? "../**/*.appiconset/*.png" \
+    : "../**/*/ic_launcher*.png"
 
-  reset_git_repo(
-    force: true,
-    files: Dir.glob(location).map {|f| File.expand_path(f)}
+  reset_git_repo(force: true, files: Dir.glob(location).map {|f| File.expand_path(f)})
+end
+
+def fetch_teams(portal, tunes)
+  client = Spaceship::ConnectAPI.login(
+    use_portal: portal,
+    use_tunes: tunes,
+    portal_team_id: nil,
+    tunes_team_id: nil,
+    team_name: nil,
+    skip_select_team: false
   )
 end
 
+def populate_supporting_files
+  UI.message("Fetching files from react-native-fastlane... 🚀")
+
+  %w[Appfile Matchfile Pluginfile Precheckfile].each do |file|
+    uri = "https://raw.githubusercontent.com/teamairship/react-native-fastlane/main/#{file}"
+    uri = URI(uri)
+    contents = Net::HTTP.get(uri)
+
+    File.open(file, "w") { |f| f.write(contents) }
+  end
+end
+
 def generate_metadata
+  UI.message("Creating metadata files for easy app creation... ✍🏼")
+
   Dir.mkdir("metadata") unless Dir.exist?("metadata")
   FileUtils.mkdir_p("metadata/default") unless Dir.exist?("metadata/default")
   FileUtils.mkdir_p("metadata/review_information") unless Dir.exist?("metadata/review_information")
@@ -333,39 +396,38 @@ def generate_metadata
   ].each { |file| FileUtils.touch("metadata/review_information/#{file}") }
 end
 
-def populate_supporting_files
-  %w[Appfile Matchfile Pluginfile Precheckfile].each do |file|
-    uri = "https://raw.githubusercontent.com/teamairship/react-native-fastlane/main/#{file}"
-    uri = URI(uri)
-    contents = Net::HTTP.get(uri)
-
-    File.open(file, "w") { |f| f.write(contents) }
-  end
-end
-
 def generate_apple_identifiers
   id = Spaceship::ConnectAPI::BundleId.create(
-    name: ENV["FASTLANE_APPLE_PROJECT_NAME"],
-    identifier: ENV["FASTLANE_APPLE_APP_ID"],
+    name: IOS_PROJ_NAME,
+    identifier: IOS_IDENTIFIER,
   )
+
+  UI.success("Created main bundle identifier... #{IOS_IDENTIFIER} ✅")
 
   id.create_capability(Spaceship::ConnectAPI::BundleIdCapability::Type::PUSH_NOTIFICATIONS)
 
+  UI.success("Added push notifications as a capability... ✅")
+
   BUILD_SCHEMES.each do |schema|
     id = Spaceship::ConnectAPI::BundleId.create(
-      name: "#{ENV["FASTLANE_APPLE_PROJECT_NAME"].capitalize} #{schema.capitalize}",
-      identifier: "#{ENV["FASTLANE_APPLE_APP_ID"]}.#{schema}",
+      identifier: "#{IOS_IDENTIFIER}.#{schema}",
+      name: "#{IOS_PROJ_NAME.capitalize} #{schema.capitalize}"
     )
+
+    UI.success("Created #{scheme} bundle identifier... #{IOS_IDENTIFIER}.#{schema} ✅")
 
     id.create_capability(Spaceship::ConnectAPI::BundleIdCapability::Type::PUSH_NOTIFICATIONS)
   end
+
+  UI.success("Apple identifiers created successfully... 🏁")
 end
 
 def generate_apple_profiles
-  match(app_identifier: [
-    ENV["FASTLANE_APPLE_APP_ID"],
-    **BUILD_SCHEMES.map { |schema| "#{ENV["FASTLANE_APPLE_APP_ID"]}.#{schema}" }
-  ])
+  match(
+    app_identifier: [IOS_IDENTIFIER] + BUILD_SCHEMES.map {|schema| "#{IOS_IDENTIFIER}.#{schema}"}
+  )
+
+  UI.success("Apple provisioning profiles created successfully... 🏁")
 end
 
 def create_app_in_portal
@@ -397,24 +459,24 @@ end
 
 def increment_build(platform)
   if platform == :ios
-    previous_build_number = latest_testflight_build_number
-    current_build_number = previous_build_number + 1
+    prev_build_number = latest_testflight_build_number
+    curr_build_number = prev_build_number + 1
 
     increment_build_number(
       xcodeproj: IOS_PROJ_PATH,
-      build_number: current_build_number
+      build_number: curr_build_number
     )
   elsif platform == :android
     latest_release = firebase_app_distribution_get_latest_release(
-      app: ENV["FIREBASE_ANDROID_APP_ID"]
+      app: ENV["FIREBASE_AND_APP_ID"]
     )
 
-    previous_build_number = latest_release[:buildVersion]&.to_i
-    current_build_number = previous_build_number + 1
+    prev_build_number = latest_release[:buildVersion]&.to_i
+    curr_build_number = prev_build_number + 1
 
     increment_version_code(
       gradle_file_path: AND_GRAD_PATH,
-      version_code: current_build_number
+      version_code: curr_build_number
     )
   end
 end
@@ -448,11 +510,6 @@ def add_suffix_to(value, lane)
   value
 end
 
-def fetch_config(value)
-  CredentialsManager::AppfileConfig.try_fetch_value(value) || ""
-end
-
 def fetch_metadata(key)
   File.read("metadata/#{key}")
 end
-

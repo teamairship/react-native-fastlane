@@ -1,6 +1,6 @@
 # React Native Fastlane
 
-The best approach to efficient react native builds and distributions.
+The best approach to efficient React Native builds and distributions.
 
 ## Prerequisites
 
@@ -16,8 +16,9 @@ $ touch .env .env.staging .env.production
 2. [Homebrew](https://brew.sh/)
 3. ImageMagick - `brew install imagemagick`
 4. [react-native-config](https://github.com/luggit/react-native-config)
+5. [Firebase App Distribution](https://rnfirebase.io/app-distribution/usage)
 
-## Setup
+## New React Native App Setup
 
 For newly initialized React Native projects, follow the steps below to standardize the project for the lanes you will use. If you're adding onto an existing project, you can skip the steps you've already done. Pay attention to the naming conventions as they are very important.
 
@@ -192,25 +193,59 @@ buildTypes {
 ## Environment Variables
 
 ```properties
-FASTLANE_CI="false"
-FASTLANE_PRODUCT_NAME="Your Product Name"
+# The name of your product with proper capitalization. This is used to build the
+# text under the icon of your application.
+FASTLANE_PRODUCT_NAME=
 
-FIREBASE_TOKEN="Obtained from Firebase CLI login"
-FIREBASE_GROUPS="Comma delimited list of groups"
-FIREBASE_IOS_APP_ID=1:***:ios:***
-FIREBASE_ANDROID_APP_ID=1:***:android:***
+# https://firebase.google.com/docs/app-distribution/ios/distribute-fastlane
+FIREBASE_TOKEN=
 
+# Comma delimited list of group names you've setup in App Distribution.
+# https://firebase.google.com/docs/app-distribution/manage-testers#add-remove-testers-group
+FIREBASE_GROUPS=
+
+# These are the generated IDs from Firebase. Once you have setup your application
+# in Firebase, follow the guide to retrieve the IDs needed. I use the staging app
+# for these IDs.
+# iOS: https://firebase.google.com/docs/app-distribution/ios/distribute-fastlane
+# Android: https://firebase.google.com/docs/app-distribution/android/distribute-fastlane
+FIREBASE_IOS_APP_ID=
+FIREBASE_AND_APP_ID=
+
+# The name of the Slack channel you want your build notifications to go to.
+# Do not add the # prefix.
 FASTLANE_SLACK_CHANNEL=
+
+# The webhook URL of the Slack channel you want your build notifications to go to.
+# https://you.slack.com/apps/manage/custom-integrations
 FASTLANE_SLACK_WEBHOOK_URL=
 
-FASTLANE_ANDROID_PACKAGE_NAME="com.your.packager.name"
-FASTLANE_ANDROID_JSON_KEY_FILE="android/pc-api-********.json"
+# The package name of the app you want to distribute.
+# Eg. com.equip
+FASTLANE_ANDROID_PACKAGE_NAME=
+# The location of the JSON key file for the Android app you want to distribute.
+# Eg. /android/12346589000.json
+FASTLANE_ANDROID_JSON_KEY_FILE=
 
-FASTLANE_APPLE_ID="you@login.com"
-FASTLANE_APPLE_TEAM_ID="Your company's team id"
-FASTLANE_APPLE_ITC_TEAM_ID="Your company's Appstore connect id"
-FASTLANE_APPLE_PROJECT_NAME="Your XCode project name"
-FASTLANE_APPLE_APP_ID="com.your.apple.id"
+# Email address that has access to the Apple Developer Portal
+# for the app you want to distribute.
+FASTLANE_APPLE_USERNAME=
+
+# Base bundle identifier of your app.
+# Eg. com.equip.AppName
+FASTLANE_APPLE_BUNDLE_IDENTIFIER=
+
+# The team ID of the Apple Developer account you want to distribute to.
+# You can find this on the Membership screen once you've logged in. It's
+# listed as Team ID. You can also find it in the URL.
+FASTLANE_APPLE_DEV_TEAM_ID=
+
+# The team ID of the App Store Connect team you want to distribute to.
+FASTLANE_APPLE_ITC_TEAM_ID=
+
+# To skip sign in on every run, generate an app specific password for the
+# FASTLANE_APPLE_USERNAME email above and set it here.
+# https://support.apple.com/en-us/HT204397
 FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD=
 ```
 
