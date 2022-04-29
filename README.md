@@ -12,11 +12,12 @@ $ touch .env .env.staging .env.production
 
 ## Dependencies
 
-1. [Bundler](https://bundler.io/)
-2. [Homebrew](https://brew.sh/)
-3. ImageMagick - `brew install imagemagick`
-4. [react-native-config](https://github.com/luggit/react-native-config)
-5. [Firebase App Distribution](https://rnfirebase.io/app-distribution/usage)
+1. [Ruby 3.1.1](https://www.ruby-lang.org/)
+2. [Bundler](https://bundler.io/)
+3. [Homebrew](https://brew.sh/)
+4. [ImageMagick](https://imagemagick.org/index.php) - `brew install imagemagick`
+5. [react-native-config](https://github.com/luggit/react-native-config)
+6. [Firebase App Distribution](https://rnfirebase.io/app-distribution/usage)
 
 ## New React Native App Setup
 
@@ -75,7 +76,7 @@ For newly initialized React Native projects, follow the steps below to standardi
 
 1. Generate a new keystore by following steps [here](https://developer.android.com/studio/publish/app-signing#generate-key)
 2. Place keystore file in the `android/app` directory.
-3. Create a `keystore.properties` in the root of your `android` directory.
+3. Create a `keystore.properties` in the root of your `android` directory. Add this to your `.gitignore` file.
 
 ```properties
 keyAlias=
@@ -172,9 +173,9 @@ buildTypes {
 </resources>
 ```
 
-3. Run `mkdir -p android/app/src/debug/res/values`
-4. Run `touch android/app/src/debug/res/values/strings.xml`
-5. Add this to the newly created `strings.xml` file:
+1. Run `mkdir -p android/app/src/debug/res/values`
+2. Run `touch android/app/src/debug/res/values/strings.xml`
+3. Add this to the newly created `strings.xml` file:
 
 ```xml
 <resources>
@@ -184,11 +185,12 @@ buildTypes {
 
 ### **Fastlane**
 
-1. Run `bundle add fastlane dotenv pry`
-2. Run `mkdir fastlane && touch fastlane/Fastfile`
-3. Add `import_from_git(url: "git@github.com:teamairship/react-native-fastlane.git", path: "Fastfile”)` to the top of your Fastfile.
-4. Run `bundle exec fastlane liftoff`
-5. Run `bundle exec fastlane install_plugins`
+1. Run `bundle init`
+2. Run `bundle add fastlane dotenv pry`
+3. Run `mkdir fastlane && touch fastlane/Fastfile`
+4. Add `import_from_git(url: "git@github.com:teamairship/react-native-fastlane.git", path: "Fastfile”)` to the top of your Fastfile.
+5. Run `bundle exec fastlane liftoff`
+6. Run `bundle exec fastlane install_plugins`
 
 ## Environment Variables
 

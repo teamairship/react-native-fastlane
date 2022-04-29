@@ -91,6 +91,14 @@ lane :liftoff do |options|
   UI.success("🎉 All done! 🎉")
 end
 
+lane :generate_push_certificate do
+  get_push_certificate(
+    force: true,
+    app_identifier: IOS_IDENTIFIER,
+    output_path: 'ios/build'
+  )
+end
+
 lane :generate_keystore do |options|
   ensure_env_vars(
     env_vars: [
@@ -128,12 +136,17 @@ platform :ios do
       xcodeproj: IOS_PROJ_PATH,
       app_identifier: lane_context["IOS_APP_ID"],
       plist_path: "/#{IOS_PROJ_NAME}/Info.plist",
-      display_name: "#{ENV["FASTLANE_PRODUCT_NAME"]} (#{options[:prefix]})"
+      display_name: "#{ENV["FASTLANE_PRODUCT_NAME"]}#{options[:prefix] ? " (#{options[:prefix]})" : ''}"
     )
   end
 
   lane :fetch_profiles do |options|
-    match(type: options[:type], readonly: is_ci, app_identifier: lane_context["IOS_APP_ID"])
+    match(
+      type: options[:type],
+      readonly: is_ci,
+      generate_apple_certs: options[:type] == "appstore",
+      app_identifier: lane_context["IOS_APP_ID"]
+    )
   end
 
   desc "Local development using iOS Simulator..."
@@ -174,15 +187,20 @@ platform :ios do
   desc "Once staging is approved, submit a production build to TestFlight testers..."
   lane :beta do
     increment_build(:ios)
+    prefix_name(prefix: nil)
     prepare_icons(platform: :ios)
     fetch_profiles(type: "appstore")
     build_application(scheme: lane_context["IOS_SCHEME"], configuration: "Release")
 
     upload_to_testflight(
+      app_version: fetch_metadata("version.txt"),
       changelog: fetch_metadata("default/release_notes.txt"),
       skip_waiting_for_build_processing: true,
       reject_build_waiting_for_review: true,
       submit_beta_review: true,
+      demo_account_required: true,
+      beta_app_feedback_email: fetch_metadata("review_information/email_address.txt"),
+      beta_app_description: fetch_metadata("default/release_notes.txt"),
       beta_app_review_info: {
         contact_email: fetch_metadata("review_information/email_address.txt"),
         contact_phone: fetch_metadata("review_information/phone_number.txt"),
@@ -419,6 +437,8 @@ def generate_apple_identifiers
     id.create_capability(Spaceship::ConnectAPI::BundleIdCapability::Type::PUSH_NOTIFICATIONS)
   end
 
+  generate_push_certificate
+
   UI.success("Apple identifiers created successfully... 🏁")
 end
 
@@ -471,7 +491,7 @@ def increment_build(platform)
       app: ENV["FIREBASE_AND_APP_ID"]
     )
 
-    prev_build_number = latest_release[:buildVersion]&.to_i
+    prev_build_number = latest_release ? latest_release[:buildVersion]&.to_i : 0
     curr_build_number = prev_build_number + 1
 
     increment_version_code(
@@ -513,3 +533,4 @@ end
 def fetch_metadata(key)
   File.read("metadata/#{key}")
 end
+
