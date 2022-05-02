@@ -131,12 +131,12 @@ platform :ios do
     )
   end
 
-  lane :prefix_name do |options|
+  lane :suffix_name do |options|
     update_info_plist(
       xcodeproj: IOS_PROJ_PATH,
       app_identifier: lane_context["IOS_APP_ID"],
       plist_path: "/#{IOS_PROJ_NAME}/Info.plist",
-      display_name: "#{ENV["FASTLANE_PRODUCT_NAME"]}#{options[:prefix] ? " (#{options[:prefix]})" : ''}"
+      display_name: "#{ENV["FASTLANE_PRODUCT_NAME"]}#{options[:suffix] ? " (#{options[:suffix]})" : ''}"
     )
   end
 
@@ -152,7 +152,7 @@ platform :ios do
   desc "Local development using iOS Simulator..."
   lane :develop do |options|
     increment_build(:ios)
-    prefix_name(prefix: "D")
+    suffix_name(suffix: "D")
     prepare_icons(platform: :ios, lane: :develop)
     fetch_profiles(type: "adhoc")
     sh "cd .. && npx react-native run-ios --scheme #{options[:scheme] || lane_context["IOS_SCHEME"]} #{options[:device] ? "device" : ""}"
@@ -170,7 +170,7 @@ platform :ios do
     )
 
     increment_build(:ios)
-    prefix_name(prefix: "S")
+    suffix_name(suffix: "S")
     prepare_icons(platform: :ios, lane: :staging)
     fetch_profiles(type: "adhoc")
     build_application(scheme: lane_context["IOS_SCHEME"], configuration: "Staging")
@@ -187,7 +187,7 @@ platform :ios do
   desc "Once staging is approved, submit a production build to TestFlight testers..."
   lane :beta do
     increment_build(:ios)
-    prefix_name(prefix: nil)
+    suffix_name(suffix: nil)
     prepare_icons(platform: :ios)
     fetch_profiles(type: "appstore")
     build_application(scheme: lane_context["IOS_SCHEME"], configuration: "Release")
@@ -244,7 +244,7 @@ platform :android do
   end
 
   desc "Development..."
-  lane :develop do
+  lane :develop do |options|
     increment_build(:android)
     prepare_icons(platform: :android, lane: :develop)
 
