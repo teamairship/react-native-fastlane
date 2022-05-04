@@ -112,13 +112,8 @@ android {
 
 ```gradle
 defaultConfig {
-    configurations.all {
-        resolutionStrategy { force 'androidx.core:core:1.6.0' }
-    }
-    versionCode 1
-    versionName "0.0.1"
-    minSdkVersion rootProject.ext.minSdkVersion
-    targetSdkVersion rootProject.ext.targetSdkVersion
+    ... other settings
+
     // Replace with your own package name.
     resValue "string", "build_config_package", "com.your.package"
 }
@@ -147,6 +142,8 @@ buildTypes {
         matchingFallbacks = ['debug', 'release']
     }
     staging {
+        ... other settings
+
         signingConfig signingConfigs.release
         minifyEnabled enableProguardInReleaseBuilds
         proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
@@ -154,6 +151,8 @@ buildTypes {
         matchingFallbacks = ['release']
     }
     release {
+        ... other settings
+
         signingConfig signingConfigs.release
         minifyEnabled enableProguardInReleaseBuilds
         proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
