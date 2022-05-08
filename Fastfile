@@ -6,7 +6,6 @@ AND_GRAD_PATH  = "android/app/build.gradle"
 AND_PACKAGE_ID = CredentialsManager::AppfileConfig.try_fetch_value(:package_name) || ""
 IOS_IDENTIFIER = CredentialsManager::AppfileConfig.try_fetch_value(:app_identifier) || ""
 
-IOS_PROJ_NAME,IOS_DIRECTORY,IOS_PROJ_PATH,IOS_WORK_PATH = nil
 Dir.glob("../ios/*.xcworkspace") do |f|
   IOS_PROJ_NAME = File.basename(f, File.extname(f))
   IOS_DIRECTORY = "ios/#{IOS_PROJ_NAME}"
@@ -134,7 +133,7 @@ platform :ios do
   lane :suffix_name do |options|
     update_info_plist(
       xcodeproj: IOS_PROJ_PATH,
-      app_identifier: lane_context["IOS_APP_ID"],
+      app_identifier: options[:suffix] ? lane_context["IOS_APP_ID"] : IOS_IDENTIFIER,
       plist_path: "/#{IOS_PROJ_NAME}/Info.plist",
       display_name: "#{ENV["FASTLANE_PRODUCT_NAME"]}#{options[:suffix] ? " (#{options[:suffix]})" : ''}"
     )
@@ -155,12 +154,13 @@ platform :ios do
     suffix_name(suffix: "D")
     prepare_icons(platform: :ios, lane: :develop)
     fetch_profiles(type: "adhoc")
-    sh "cd .. && npx react-native run-ios --scheme #{options[:scheme] || lane_context["IOS_SCHEME"]} #{options[:device] ? "device" : ""}"
+    sh "cd .. && npx react-native run-ios --scheme #{options[:scheme] || lane_context["IOS_SCHEME"]} #{options[:device] ? "--device" : ""}"
+    suffix_name(suffix: nil)
     discard_icons(platform: :ios)
   end
 
   desc "Submit a new staging build to Firebase testers..."
-  lane :staging do
+  lane :staging do |options|
     ensure_env_vars(
       env_vars: [
         "FIREBASE_TOKEN",
@@ -173,15 +173,22 @@ platform :ios do
     suffix_name(suffix: "S")
     prepare_icons(platform: :ios, lane: :staging)
     fetch_profiles(type: "adhoc")
-    build_application(scheme: lane_context["IOS_SCHEME"], configuration: "Staging")
 
-    firebase_app_distribution(
-      app: ENV["FIREBASE_IOS_APP_ID"],
-      groups: ENV["FIREBASE_GROUPS"]
-    )
+    if options[:local]
+      sh "cd .. && npx react-native run-ios --scheme #{options[:scheme] || lane_context["IOS_SCHEME"]} #{options[:device] ? "--device" : ""}"
+    else
+      build_application(scheme: lane_context["IOS_SCHEME"], configuration: "Staging")
 
+      firebase_app_distribution(
+        app: ENV["FIREBASE_IOS_APP_ID"],
+        groups: ENV["FIREBASE_GROUPS"]
+      )
+
+      notify_the_team(:ios, :staging)
+    end
+
+    suffix_name(suffix: nil)
     discard_icons(platform: :ios)
-    notify_the_team(:ios, :staging)
   end
 
   desc "Once staging is approved, submit a production build to TestFlight testers..."
