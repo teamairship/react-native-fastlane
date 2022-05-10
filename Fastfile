@@ -201,13 +201,13 @@ platform :ios do
 
     upload_to_testflight(
       app_version: fetch_metadata("version.txt"),
-      changelog: fetch_metadata("default/release_notes.txt"),
       skip_waiting_for_build_processing: true,
       reject_build_waiting_for_review: true,
       submit_beta_review: true,
-      demo_account_required: true,
       beta_app_feedback_email: fetch_metadata("review_information/email_address.txt"),
       beta_app_description: fetch_metadata("default/release_notes.txt"),
+      demo_account_required: true,
+      changelog: fetch_metadata("default/release_notes.txt"),
       beta_app_review_info: {
         contact_email: fetch_metadata("review_information/email_address.txt"),
         contact_phone: fetch_metadata("review_information/phone_number.txt"),
@@ -218,7 +218,7 @@ platform :ios do
         notes: fetch_metadata("review_information/notes.txt")
       },
       localized_app_info: {
-        default: {
+        "default": {
           feedback_email: fetch_metadata("review_information/email_address.txt"),
           marketing_url: fetch_metadata("default/marketing_url.txt"),
           privacy_policy_url: fetch_metadata("default/privacy_url.txt"),
@@ -233,7 +233,10 @@ platform :ios do
   desc "Once beta is approved, promote beta build to App Store..."
   lane :release do
     upload_to_app_store(
-      submission_information: "{\"export_compliance_uses_encryption\": false, \"add_id_info_uses_idfa\": false }"
+      submission_information: "{\"export_compliance_uses_encryption\": false, \"add_id_info_uses_idfa\": false }",
+      app_version: fetch_metadata("version.txt"),
+      skip_screenshots: true,
+      include_in_app_purchases: false
     )
 
     notify_the_team(:ios, :release)
@@ -254,9 +257,7 @@ platform :android do
   lane :develop do |options|
     increment_build(:android)
     prepare_icons(platform: :android, lane: :develop)
-
     sh "cd .. && adb reverse tcp:8081 tcp:8081 && npx react-native run-android --variant=#{options[:variant] || "developDebug"}"
-
     discard_icons(platform: :android)
   end
 
@@ -319,7 +320,7 @@ platform :android do
 end
 
 lane :prepare_icons do |options|
-  platform = options[:platform]
+  platform = options[:platform].to_sym
 
   if platform == :ios
     appicon(
@@ -350,9 +351,9 @@ end
 
 lane :discard_icons do |options|
   platform = options[:platform]
-  location = platform == :ios \
-    ? "../**/*.appiconset/*.png" \
-    : "../**/*/ic_launcher*.png"
+  location = platform == :android \
+    ? "../android/**/*/ic_launcher*.png"\
+    : "../ios/**/*.appiconset/*.png"
 
   reset_git_repo(force: true, files: Dir.glob(location).map {|f| File.expand_path(f)})
 end
@@ -371,7 +372,7 @@ end
 def populate_supporting_files
   UI.message("Fetching files from react-native-fastlane... 🚀")
 
-  %w[Appfile Matchfile Pluginfile Precheckfile].each do |file|
+  %w[Appfile Matchfile Pluginfile Precheckfile Deliverfile].each do |file|
     uri = "https://raw.githubusercontent.com/teamairship/react-native-fastlane/main/#{file}"
     uri = URI(uri)
     contents = Net::HTTP.get(uri)
