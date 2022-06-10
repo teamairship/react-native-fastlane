@@ -152,7 +152,7 @@ platform :ios do
     increment_build(:ios)
     suffix_name(suffix: "D")
     prepare_icons(platform: :ios, lane: :develop)
-    fetch_profiles(type: "adhoc")
+    fetch_profiles(type: "development")
     sh "cd .. && npx react-native run-ios --scheme #{options[:scheme] || lane_context["IOS_SCHEME"]} #{options[:device] ? "--device" : ""}"
     suffix_name(suffix: nil)
     discard_icons(platform: :ios)
