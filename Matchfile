@@ -1,4 +1,4 @@
 git_url("git@bitbucket.org:teamairship/certificates.git")
-git_branch("main")
+git_branch(ENV["FASTLANE_PRODUCT_NAME"])
 storage_mode("git")
 type("development")
