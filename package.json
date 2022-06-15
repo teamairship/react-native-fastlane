@@ -1,0 +1,25 @@
+{
+  "name": "react-native-fastlane",
+  "version": "1.0.0",
+  "description": "The best approach to efficient React Native builds and distributions.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepare": "husky install"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/teamairship/react-native-fastlane.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/teamairship/react-native-fastlane/issues"
+  },
+  "homepage": "https://github.com/teamairship/react-native-fastlane#readme",
+  "devDependencies": {
+    "husky": "^8.0.1",
+    "prettier": "2.7.0",
+    "pretty-quick": "^3.1.3"
+  }
+}
