@@ -91,7 +91,7 @@ end
 
 lane :generate_apple_profiles do
   BUILD_SCHEMES.each do |scheme|
-    match(app_identifier: "#{IOS_IDENTIFIER}.#{scheme}", type: scheme == 'develop' ? 'development' : 'adhoc')
+    match(app_identifier: "#{IOS_IDENTIFIER}.#{scheme}", type: scheme == :develop ? 'development' : 'adhoc')
   end
 
   match(app_identifier: IOS_IDENTIFIER, type: 'appstore')
