@@ -1,7 +1,7 @@
 fastlane_require "net/http"
 fastlane_require "dotenv"
 
-BUILD_SCHEMES  = %i[develop staging]
+BUILD_SCHEMES  = %i[develop staging].freeze
 AND_GRAD_PATH  = "android/app/build.gradle"
 AND_PACKAGE_ID = CredentialsManager::AppfileConfig.try_fetch_value(:package_name) || ""
 IOS_IDENTIFIER = CredentialsManager::AppfileConfig.try_fetch_value(:app_identifier) || ""
@@ -87,6 +87,16 @@ lane :liftoff do |options|
   end
 
   UI.success("🎉 All done! 🎉")
+end
+
+lane :generate_apple_profiles do
+  BUILD_SCHEMES.each do |scheme|
+    match(app_identifier: "#{IOS_IDENTIFIER}.#{schema}", type: scheme == 'develop' ? 'development' : 'adhoc')
+  end
+
+  match(app_identifier: IOS_IDENTIFIER, type: 'appstore')
+
+  UI.success("Apple provisioning profiles created successfully... 🏁")
 end
 
 lane :generate_push_certificate do
@@ -449,14 +459,6 @@ def generate_apple_identifiers
   UI.success("Apple identifiers created successfully... 🏁")
 end
 
-def generate_apple_profiles
-  match(
-    app_identifier: [IOS_IDENTIFIER] + BUILD_SCHEMES.map {|schema| "#{IOS_IDENTIFIER}.#{schema}"}
-  )
-
-  UI.success("Apple provisioning profiles created successfully... 🏁")
-end
-
 def create_app_in_portal
   sku = prompt(
     text: "What is the SKU for this app?"
@@ -485,6 +487,7 @@ def fetch_version(platform)
 end
 
 def increment_build(platform)
+  # https://github.com/fastlane/fastlane-plugin-firebase_app_distribution/blob/master/lib/fastlane/plugin/firebase_app_distribution/actions/firebase_app_distribution_get_latest_release.rb
   if platform == :ios
     prev_build_number = latest_testflight_build_number
     curr_build_number = prev_build_number + 1
@@ -540,4 +543,3 @@ end
 def fetch_metadata(key)
   File.read("metadata/#{key}")
 end
-
