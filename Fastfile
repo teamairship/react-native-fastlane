@@ -1,3 +1,5 @@
+# import_from_git(url: "git@github.com:teamairship/react-native-fastlane.git", path: "Fastfile")
+
 fastlane_require "net/http"
 fastlane_require "dotenv"
 
@@ -21,6 +23,7 @@ before_all do |lane, options|
       "FASTLANE_PRODUCT_NAME",
       "FASTLANE_APPLE_USERNAME",
       "FASTLANE_ANDROID_PACKAGE_NAME",
+      "FASTLANE_ANDROID_JSON_KEY_FILE",
       "FASTLANE_APPLE_BUNDLE_IDENTIFIER",
       "FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD"
     ]
@@ -89,16 +92,6 @@ lane :liftoff do |options|
   UI.success("🎉 All done! 🎉")
 end
 
-lane :generate_apple_profiles do
-  BUILD_SCHEMES.each do |scheme|
-    match(app_identifier: "#{IOS_IDENTIFIER}.#{scheme}", type: scheme == :develop ? 'development' : 'adhoc')
-  end
-
-  match(app_identifier: IOS_IDENTIFIER, type: 'appstore')
-
-  UI.success("Apple provisioning profiles created successfully... 🏁")
-end
-
 lane :generate_push_certificate do
   get_push_certificate(
     force: true,
@@ -142,9 +135,9 @@ platform :ios do
   lane :suffix_name do |options|
     update_info_plist(
       xcodeproj: IOS_PROJ_PATH,
-      app_identifier: options[:suffix] ? lane_context["IOS_APP_ID"] : IOS_IDENTIFIER,
+      app_identifier: options[:suffix] ? lane_context["IOS_APP_ID"] : "$(PRODUCT_BUNDLE_IDENTIFIER)",
       plist_path: "/#{IOS_PROJ_NAME}/Info.plist",
-      display_name: "#{ENV["FASTLANE_PRODUCT_NAME"]}#{options[:suffix] ? " (#{options[:suffix]})" : ''}"
+      display_name: "#{options[:suffix] ? "#{ENV["FASTLANE_PRODUCT_NAME"]} (#{options[:suffix]})" : "$(PRODUCT_NAME)"}",
     )
   end
 
@@ -459,6 +452,14 @@ def generate_apple_identifiers
   UI.success("Apple identifiers created successfully... 🏁")
 end
 
+def generate_apple_profiles
+  match(
+    app_identifier: [IOS_IDENTIFIER] + BUILD_SCHEMES.map {|schema| "#{IOS_IDENTIFIER}.#{schema}"}
+  )
+
+  UI.success("Apple provisioning profiles created successfully... 🏁")
+end
+
 def create_app_in_portal
   sku = prompt(
     text: "What is the SKU for this app?"
@@ -543,3 +544,4 @@ end
 def fetch_metadata(key)
   File.read("metadata/#{key}")
 end
+
