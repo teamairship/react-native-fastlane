@@ -2,6 +2,16 @@
 
 The best approach to efficient React Native builds and distributions.
 
+## Table of Contents
+
+1. [Prerequisites](#prerequisites)
+2. [Dependencies](#dependencies)
+3. [New React Native App Setup](#new-react-native-app-setup)
+   1. [Firebase Setup](#firebase-setup)
+   2. [iOS Setup](#ios-setup)
+   3. [Android Setup](#android-setup)
+   4. [Initialize Fastlane](#initialize-fastlane)
+
 ## Prerequisites
 
 ```bash
@@ -17,39 +27,57 @@ $ touch .env .env.staging .env.production
 3. [Homebrew](https://brew.sh/)
 4. [ImageMagick](https://imagemagick.org/index.php) - `brew install imagemagick`
 5. [react-native-config](https://github.com/luggit/react-native-config)
-6. [Firebase App Distribution](https://rnfirebase.io/app-distribution/usage)
+<!-- 6. [Firebase App Distribution](https://rnfirebase.io/app-distribution/usage) -->
 
 ## New React Native App Setup
 
 For newly initialized React Native projects, follow the steps below to standardize the project for the lanes you will use. If you're adding onto an existing project, you can skip the steps you've already done. Pay attention to the naming conventions as they are very important.
 
-### **iOS**
+### Firebase Setup
 
-#### **Step 1** - Create Build Configuration
+#### Step 1 - Have the Client Create a Firebase Project
+
+Have the client complete the following steps:
+
+1. Log into a Google account, preferably one that isn't a personal account. (You may need to create a separate account for this if you don't have one already.)
+2. After logging in to a google account, visit https://firebase.google.com.
+3. In the top right corner, click the "Go to Console" button
+4. Once you are in the console, create a new project and give it a relevant name.
+5. After the project is created, add all relevant Airship team members by clicking on the cog next to "Project Overview", then clicking "Users and Permissions" (photo attached)
+6. Add each Airship team member as an "owner" (doesn't actually reflect legal ownership, just gives full permissions)
+
+### Step 2 - Complete Firebase Project Setup
+
+1. Add the Firebase base dependency, and add apps to the project. [See instructions here](https://rnfirebase.io/#installation).
+2. Add the Firebase App Distribution dependency. [See instructions here](https://rnfirebase.io/app-distribution/usage).
+
+### iOS Setup
+
+#### Step 1 - Create Build Configuration
 
 1. Open the Xcode Workspace (\*.xcworkspace)
 2. Click on the project, then the “+” icon under the “Configurations” section and select “Duplicate Release Build Configuration” and name it “Staging”
 3. In your terminal, navigate to the `ios` directory and run `pod install`
 
-#### **Step 2** - Create Staging Scheme
+#### Step 2 - Create Staging Scheme
 
 1. In the main menu, select Product > Scheme > Manage Schemes
 2. Click on the main project scheme (same as project name) and click on the icon at the bottom and select “Duplicate”
-3. The new scheme name will be highlight, and call it “_project_name_.staging”
+3. The new scheme name will be highlighted, and call it “_project_name_.staging”
 4. The edit scheme screen should remain open
 5. Change the “Build Configuration” on the “Run”, “Profile” and “Archive” to the new “Staging” configuration
 6. Back on the “Manage Schemes” window, make sure “Shared” is checked for the _project_name_.staging scheme
 
-#### **Step 3** - Create Develop Scheme
+#### Step 3 - Create Develop Scheme
 
 1. In the main menu, select Product > Scheme > Manage Schemes
 2. Click on the main project scheme (same as project name) and click on the icon at the bottom and select “Duplicate”
-3. The new scheme name will be highlight, and call it “_project_name_.develop
+3. The new scheme name will be highlighted, and call it “_project_name_.develop
 4. The edit scheme screen should remain open
 5. Change the “Build Configuration” on the “Run”, “Profile” and “Archive” to the “Debug" configuration
 6. Back on the “Manage Schemes” window, make sure “Shared” is checked for the _project_name_.develop scheme
 
-#### **Step 4** - Configure Environment Variables
+#### Step 4 - Configure Environment Variables
 
 - Main Scheme
   - In the main menu, select Product > Scheme > Manage Schemes.
@@ -62,17 +90,17 @@ For newly initialized React Native projects, follow the steps below to standardi
   - Click on the \*.staging project scheme and click the Edit button.
   - Expand the Build menu and click on Pre-actions.
   - Click the + sign and select New Run Script Action.
-  - In the field, copy and paste `echo ".env.staging” > /tmp/envfile`
+  - In the field, copy and paste `echo ".env.staging" > /tmp/envfile`
 - Develop Scheme
   - In the main menu, select Product > Scheme > Manage Schemes.
   - Click on the \*.develop project scheme and click the Edit button.
   - Expand the Build menu and click on Pre-actions.
   - Click the + sign and select New Run Script Action.
-  - In the field, copy and paste `echo ".env” > /tmp/envfile`
+  - In the field, copy and paste `echo ".env" > /tmp/envfile`
 
-### **Android**
+### Android Setup
 
-#### **Step 1** - Setup Keystore
+#### Step 1 - Setup Keystore
 
 1. Generate a new keystore by following steps [here](https://developer.android.com/studio/publish/app-signing#generate-key)
 2. Place keystore file in the `android/app` directory.
@@ -85,7 +113,7 @@ storeFile=keystore_name.keystore
 storePassword=
 ```
 
-#### **Step 2** - Gradle Updates
+#### Step 2 - Gradle Updates
 
 Open `android/app/build.gradle` and make the following updates.
 
@@ -162,8 +190,7 @@ productFlavors {
     }
 ```
 
-
-#### **Step 3** - Update Build Names
+#### Step 3 - Update Build Names
 
 1. Run `mkdir -p android/app/src/staging/res/values`
 2. Run `touch android/app/src/staging/res/values/strings.xml`
@@ -185,18 +212,22 @@ productFlavors {
 </resources>
 ```
 
-### **Fastlane**
+### Initialize Fastlane
 
 1. Run `bundle init`
 2. Run `bundle add fastlane dotenv pry`
 3. Run `mkdir fastlane && touch fastlane/Fastfile`
-4. Add `import_from_git(url: "git@github.com:teamairship/react-native-fastlane.git", path: "Fastfile”)` to the top of your Fastfile.
+4. Add `import_from_git(url: "git@github.com:teamairship/react-native-fastlane.git", path: "Fastfile")` to the top of your Fastfile.
 5. Run `bundle exec fastlane liftoff`
 6. Run `bundle exec fastlane install_plugins`
 
 ## Environment Variables
 
 ```properties
+##############################
+###        FASTLANE        ###
+##############################
+
 # The name of your product with proper capitalization. This is used to build the
 # text under the icon of your application.
 FASTLANE_PRODUCT_NAME=
