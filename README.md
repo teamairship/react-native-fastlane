@@ -158,7 +158,18 @@ buildTypes {
         proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
     }
 }
+// Add this whole block:
+productFlavors {
+        develop {
+            applicationIdSuffix ".develop"
+        }
+        staging {
+            applicationIdSuffix ".staging"
+        }
+        production {}
+    }
 ```
+
 
 #### **Step 3** - Update Build Names
 
