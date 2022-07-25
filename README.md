@@ -138,17 +138,7 @@ signingConfigs {
 buildTypes {
     debug {
         signingConfig signingConfigs.debug
-        applicationIdSuffix ".develop"
         matchingFallbacks = ['debug', 'release']
-    }
-    staging {
-        ... other settings
-
-        signingConfig signingConfigs.release
-        minifyEnabled enableProguardInReleaseBuilds
-        proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
-        applicationIdSuffix ".staging"
-        matchingFallbacks = ['release']
     }
     release {
         ... other settings
