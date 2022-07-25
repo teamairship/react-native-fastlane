@@ -106,6 +106,7 @@ def keystoreProperties = new Properties()
 keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 
 android {
+  flavorDimensions "version"
   ...
 }
 ```
@@ -148,7 +149,8 @@ buildTypes {
         proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
     }
 }
-// Add this whole block:
+
+// Add this whole block directly under buildTypes:
 productFlavors {
         develop {
             applicationIdSuffix ".develop"
