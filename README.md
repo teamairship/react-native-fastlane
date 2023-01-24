@@ -218,6 +218,8 @@ productFlavors {
 - Then click -> Save Changes
 - After this you are all set
 
+
+
 ### **Fastlane**
 
 1. Run `bundle init`
@@ -285,6 +287,11 @@ FASTLANE_APPLE_ITC_TEAM_ID=
 # https://support.apple.com/en-us/HT204397
 FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD=
 ```
+
+### Troubleshooting
+#### Fastlane Generated Icons
+- Place image named **app_icon.png** at same level of Fastfile
+- If above doesnt work remove lines for `appicon_image_file` and place image in `fastlane/metadata` folder
 
 ## Resources
 
