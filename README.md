@@ -185,6 +185,39 @@ productFlavors {
 </resources>
 ```
 
+### Obtaining Firebase JSON Key File
+
+- Open the Google Play Console -> https://play.google.com/console/u/1/developers/
+- Click **Setup** -> **API Access**
+- Click button for “**Choose a project to link”**
+- Click agree on “Terms of Service”
+- Select  **Create a new Google Cloud project**  then click **Save** 
+- In the **Google Cloud Project** section  click button for **View in Google Cloud Platform**
+- In top left menu bar click **IAM & Admin**-> **Service Accounts**
+- Click button “**Create Service Account”**
+- For service account name put **prometheus\_mobile**
+- This will populate the service account id
+- For Service account description you can put **Fastlane Integration**
+- Click button “**Create“** and then “**Continue”**
+- You will see a drop down under role and your going to select **Service Accounts** -> **Service Account User**
+- Click -> **Continue** -> **Done**
+- On new screen you will see the service you just created
+- Click the **three dots** under “**Actions”**
+- Select -> Manage Keys
+- Click -> **Add Key** -> **Create New Key**  and select **JSON** 
+- This will create a JSON file that you can then send to **your_airship_email** 
+- Once this is done go back in the Google Play Console and go to **Setup** -> **API Access** 
+- You will now see the service you created below the **Credentials** section
+- Click -> Manage Play Console permissions
+- Under **Account Permissions**  select the following
+	- View app information and download bulk reports
+	- Create, edit and delete draft apps
+	- Release apps to testing tracks
+	- Manage testing tracks and edit tester lists
+	- Manage store presence
+- Then click -> Save Changes
+- After this you are all set
+
 ### **Fastlane**
 
 1. Run `bundle init`
