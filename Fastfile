@@ -122,7 +122,6 @@ platform :ios do
     build_app(
       silent: true,
       include_symbols: true,
-      include_bitcode: true,
       analyze_build_time: true,
       scheme: options[:scheme],
       workspace: IOS_WORK_PATH,
