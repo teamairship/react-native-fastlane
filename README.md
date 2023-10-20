@@ -293,6 +293,9 @@ FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD=
 - Place image named **app_icon.png** at same level of Fastfile
 - If above doesnt work remove lines for `appicon_image_file` and place image in `fastlane/metadata` folder
 
+#### Homescreen iOS App Name changed
+If your exported app name is different than expected, you may need to replace `$(PRODUCT_NAME)` with `$(DISPLAY_NAME)` inside the `update_info_plist` lane in the Fastfile.
+
 ## Resources
 
 [Fastlane Docs](https://docs.fastlane.tools/)
